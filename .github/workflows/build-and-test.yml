@@ -1,0 +1,56 @@
+name: Build, test, test all examples
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  GIT_COMMIT: ${{ github.sha }}
+  GIT_REF: ${{ github.ref }}
+  ENABLE_FEATURE_V4: true
+  LOG_LEVEL: info
+
+jobs:
+  build-and-test-ubuntu:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [14.x, 16.x, 18.x]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci && npm t
+        env:
+          NODE_VERSION: ${{ matrix.node-version }}
+
+  build-and-test-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node-version: [14.x, 16.x, 18.x]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Fix node-gyp
+        run: |-
+          npm install --global node-gyp@latest
+          npm prefix -g | % {npm config set node_gyp "$_\node_modules\node-gyp\bin\node-gyp.js"}
+        shell: pwsh
+      - run: npm ci && npm t
+        shell: bash
+        env:
+          NODE_VERSION: ${{ matrix.node-version }}
